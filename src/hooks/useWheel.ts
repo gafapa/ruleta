@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import type { WheelItem, SpinResult } from '../types'
 import { easeOutQuartic, computeSpinAngle } from '../services/wheel'
 import { contrastTextColor } from '../services/colors'
@@ -199,6 +199,20 @@ export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: U
   const angleRef = useRef(0)
   const rafRef = useRef<number | null>(null)
   const isSpinningRef = useRef(false)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+      isSpinningRef.current = false
+    }
+  }, [])
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current
@@ -250,8 +264,10 @@ export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: U
       if (t < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
+        rafRef.current = null
         angleRef.current = targetAngle
         isSpinningRef.current = false
+        if (!isMountedRef.current) return
         onSpinEnd()
         onResult({ item: items[targetIndex]!, segmentIndex: targetIndex, displayColor })
       }

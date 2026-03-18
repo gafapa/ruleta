@@ -18,6 +18,7 @@ export function FileUpload({ onItems }: FileUploadProps) {
   const processFile = useCallback(
     async (file: File) => {
       setError(null)
+      setFileName(null)
       if (!file.name.endsWith('.txt')) {
         setError('Solo se admiten archivos .txt')
         return
@@ -52,7 +53,11 @@ export function FileUpload({ onItems }: FileUploadProps) {
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file) void processFile(file)
+      if (file) {
+        void processFile(file).finally(() => {
+          e.target.value = ''
+        })
+      }
     },
     [processFile],
   )

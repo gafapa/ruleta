@@ -28,6 +28,7 @@ export function useSavedWheels() {
   const deleteWheel = useCallback((id: string) => {
     storage.deleteWheel(id)
     setWheels(storage.getWheels())
+    setError(null)
   }, [])
 
   return { wheels, saveWheel, deleteWheel, error }

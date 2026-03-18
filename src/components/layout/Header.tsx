@@ -6,7 +6,6 @@ interface HeaderProps {
   onNameChange: (name: string) => void
   itemCount: number
   view: 'setup' | 'play'
-  onViewChange: (v: 'setup' | 'play') => void
 }
 
 function WheelIcon() {
@@ -43,7 +42,7 @@ function WheelIcon() {
   )
 }
 
-export function Header({ wheelName, onNameChange, itemCount, view, onViewChange }: HeaderProps) {
+export function Header({ wheelName, onNameChange, itemCount, view }: HeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)

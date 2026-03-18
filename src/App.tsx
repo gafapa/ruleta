@@ -58,7 +58,7 @@ export default function App() {
   const [showConfetti, setShowConfetti] = useState(false)
   const [wheelStyleId, setWheelStyleId] = useState<WheelStyleId>(DEFAULT_STYLE_ID)
   const originalItemsRef = useRef(initialState.items)
-  const { wheels, saveWheel, deleteWheel } = useSavedWheels()
+  const { wheels, saveWheel, deleteWheel, error: saveError } = useSavedWheels()
   const [isSavingWheel, setIsSavingWheel] = useState(false)
   const [saveName, setSaveName] = useState('')
   const [savedFeedback, setSavedFeedback] = useState(false)
@@ -123,7 +123,6 @@ export default function App() {
         onNameChange={(name) => dispatch({ type: 'SET_WHEEL_NAME', payload: name })}
         itemCount={state.items.length}
         view={view}
-        onViewChange={setView}
       />
 
       {view === 'setup' ? (
@@ -180,6 +179,15 @@ export default function App() {
               )}
             </GlassCard>
 
+            {saveError && (
+              <p
+                className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"
+                role="alert"
+              >
+                {saveError}
+              </p>
+            )}
+
             <SavedWheelsPanel
               wheels={wheels}
               onLoad={(items, name) => {
@@ -195,7 +203,9 @@ export default function App() {
           <div className="max-w-[560px] mx-auto flex flex-col items-center gap-4 animate-fade-in">
             <button
               onClick={() => setView('setup')}
-              className="self-start flex items-center gap-1.5 text-sm text-slate-500 hover:text-violet-600 transition-colors"
+              disabled={state.isSpinning}
+              title={state.isSpinning ? 'Espera a que termine el giro' : ''}
+              className="self-start flex items-center gap-1.5 text-sm text-slate-500 hover:text-violet-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Editar ruleta
