@@ -305,6 +305,21 @@ export default function App() {
         </main>
       )}
 
+      <footer className="px-4 pb-6">
+        <div className="mx-auto max-w-[560px] text-center text-xs text-slate-400">
+          Proyecto:
+          {' '}
+          <a
+            href="https://github.com/gafapa/ruleta"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-violet-600 hover:text-violet-500 transition-colors"
+          >
+            https://github.com/gafapa/ruleta
+          </a>
+        </div>
+      </footer>
+
       {state.result && (
         <ResultModal
           result={state.result}

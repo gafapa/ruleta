@@ -14,6 +14,7 @@ Aplicacion web de ruleta giratoria sin backend. Todo corre en el navegador y los
 - Selector de 12 estilos visuales para la ruleta.
 - Modal de resultado con confeti.
 - Instalacion como web app en navegadores compatibles.
+- Enlace visible al proyecto en el pie de la aplicacion.
 
 ## Cambios recientes
 
@@ -74,6 +75,11 @@ Para revisar el resultado localmente:
 ```bash
 npm run preview
 ```
+
+## Proyecto
+
+- Repositorio: `https://github.com/gafapa/ruleta`
+- Ruta de despliegue esperada: `/ruleta/`
 
 ## Notas tecnicas
 
