@@ -1,11 +1,14 @@
 import { useRef, useState } from 'react'
-import { Pencil, Check } from 'lucide-react'
+import { Pencil, Check, Download } from 'lucide-react'
 
 interface HeaderProps {
   wheelName: string
   onNameChange: (name: string) => void
   itemCount: number
   view: 'setup' | 'play'
+  canInstall: boolean
+  isInstalled: boolean
+  onInstall: () => void
 }
 
 function WheelIcon() {
@@ -42,7 +45,15 @@ function WheelIcon() {
   )
 }
 
-export function Header({ wheelName, onNameChange, itemCount, view }: HeaderProps) {
+export function Header({
+  wheelName,
+  onNameChange,
+  itemCount,
+  view,
+  canInstall,
+  isInstalled,
+  onInstall,
+}: HeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -121,6 +132,20 @@ export function Header({ wheelName, onNameChange, itemCount, view }: HeaderProps
 
       {/* Right */}
       <div className="ml-auto shrink-0 flex items-center gap-3">
+        {canInstall && (
+          <button
+            onClick={onInstall}
+            className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Instalar app
+          </button>
+        )}
+        {!canInstall && isInstalled && (
+          <span className="text-xs font-semibold bg-slate-900 text-white rounded-full px-3 py-1">
+            App instalada
+          </span>
+        )}
         {itemCount > 0 && (
           <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-3 py-1">
             {itemCount} elemento{itemCount !== 1 ? 's' : ''}

@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useState, useRef } from 'react'
+import { useReducer, useCallback, useState, useRef, useEffect } from 'react'
 import { Play, ArrowLeft, BookmarkPlus, RotateCcw } from 'lucide-react'
 import type { AppState, AppAction, SpinResult } from './types'
 import { Header } from './components/layout/Header'
@@ -12,6 +12,17 @@ import { Button } from './components/ui/Button'
 import { GlassCard } from './components/ui/GlassCard'
 import { useSavedWheels } from './hooks/useSavedWheels'
 import { DEFAULT_STYLE_ID, type WheelStyleId } from './services/wheelStyles'
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent
+  }
+}
 
 const initialState: AppState = {
   items: [],
@@ -62,6 +73,39 @@ export default function App() {
   const [isSavingWheel, setIsSavingWheel] = useState(false)
   const [saveName, setSaveName] = useState('')
   const [savedFeedback, setSavedFeedback] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(display-mode: standalone)')
+    const syncInstalledState = () => {
+      const iosStandalone =
+        'standalone' in window.navigator &&
+        Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
+      setIsInstalled(media.matches || iosStandalone)
+    }
+
+    const handleBeforeInstallPrompt = (event: BeforeInstallPromptEvent) => {
+      event.preventDefault()
+      setInstallPrompt(event)
+    }
+
+    const handleInstalled = () => {
+      setIsInstalled(true)
+      setInstallPrompt(null)
+    }
+
+    syncInstalledState()
+    media.addEventListener('change', syncInstalledState)
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleInstalled)
+
+    return () => {
+      media.removeEventListener('change', syncInstalledState)
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleInstalled)
+    }
+  }, [])
 
   function handleSaveWheel() {
     const name = saveName.trim() || state.wheelName
@@ -116,6 +160,15 @@ export default function App() {
     setShowConfetti(false)
   }, [])
 
+  const handleInstallApp = useCallback(async () => {
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    const choice = await installPrompt.userChoice
+    if (choice.outcome === 'accepted') {
+      setInstallPrompt(null)
+    }
+  }, [installPrompt])
+
   return (
     <div className="min-h-screen font-display">
       <Header
@@ -123,6 +176,9 @@ export default function App() {
         onNameChange={(name) => dispatch({ type: 'SET_WHEEL_NAME', payload: name })}
         itemCount={state.items.length}
         view={view}
+        canInstall={installPrompt !== null}
+        isInstalled={isInstalled}
+        onInstall={handleInstallApp}
       />
 
       {view === 'setup' ? (

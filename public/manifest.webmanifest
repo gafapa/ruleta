@@ -1,0 +1,26 @@
+{
+  "name": "Ruleta",
+  "short_name": "Ruleta",
+  "description": "Ruleta giratoria instalable para sorteos, listas y dinamicas.",
+  "lang": "es",
+  "start_url": "/ruleta/",
+  "scope": "/ruleta/",
+  "display": "standalone",
+  "background_color": "#090914",
+  "theme_color": "#090914",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "pwa-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "pwa-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
