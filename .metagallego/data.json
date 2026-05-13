@@ -1,0 +1,14 @@
+{
+  "_info": "This file is read by metagallego. Fill in title, description and techStack to document your project. The _info field is ignored.",
+  "title": "Ruleta",
+  "description": "Spinning wheel web app for raffles, lists, and random selections.",
+  "techStack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "Tailwind CSS",
+    "Canvas API",
+    "PWA"
+  ],
+  "category": ""
+}

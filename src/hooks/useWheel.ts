@@ -3,6 +3,8 @@ import type { WheelItem, SpinResult } from '../types'
 import { easeOutQuartic, computeSpinAngle } from '../services/wheel'
 import { contrastTextColor } from '../services/colors'
 import { getStyle, type WheelStyleId } from '../services/wheelStyles'
+import { randomFloat, randomInt } from '../services/random'
+import { useI18n } from '../services/i18n'
 
 function truncateLabel(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
   if (ctx.measureText(label).width <= maxWidth) return label
@@ -18,6 +20,7 @@ function drawWheel(
   angle: number,
   items: WheelItem[],
   styleId: WheelStyleId = 'clasica',
+  emptyLabel = 'Add items',
 ) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -57,7 +60,7 @@ function drawWheel(
     ctx.font = '600 18px Inter, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('Añade elementos', cx, cy)
+    ctx.fillText(emptyLabel, cx, cy)
     return
   }
 
@@ -195,6 +198,7 @@ interface UseWheelOptions {
 }
 
 export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: UseWheelOptions) {
+  const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const angleRef = useRef(0)
   const rafRef = useRef<number | null>(null)
@@ -226,14 +230,14 @@ export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: U
     canvas.style.height = `${size}px`
     const ctx = canvas.getContext('2d')
     if (ctx) ctx.scale(dpr, dpr)
-    drawWheel(canvas, angleRef.current, items, styleId)
-  }, [items, styleId])
+    drawWheel(canvas, angleRef.current, items, styleId, t('canvasEmpty'))
+  }, [items, styleId, t])
 
   const redraw = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    drawWheel(canvas, angleRef.current, items, styleId)
-  }, [items, styleId])
+    drawWheel(canvas, angleRef.current, items, styleId, t('canvasEmpty'))
+  }, [items, styleId, t])
 
   const spin = useCallback(() => {
     if (isSpinningRef.current || items.length < 2) return
@@ -244,24 +248,24 @@ export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: U
     isSpinningRef.current = true
     onSpinStart()
 
-    const targetIndex = Math.floor(Math.random() * items.length)
-    const extraRotations = 5 + Math.floor(Math.random() * 4)
+    const targetIndex = randomInt(items.length)
+    const extraRotations = 5 + randomInt(4)
     const totalDelta = computeSpinAngle(angleRef.current, targetIndex, items.length, extraRotations)
     const startAngle = angleRef.current
     const targetAngle = startAngle + totalDelta
-    const duration = 4000 + Math.random() * 2000
+    const duration = 4000 + randomFloat() * 2000
     const startTime = performance.now()
     const style = getStyle(styleId)
     const displayColor = style.colors[targetIndex % style.colors.length]!
 
     function frame(now: number) {
       const elapsed = now - startTime
-      const t = Math.min(elapsed / duration, 1)
-      const eased = easeOutQuartic(t)
+      const progress = Math.min(elapsed / duration, 1)
+      const eased = easeOutQuartic(progress)
       angleRef.current = startAngle + totalDelta * eased
-      drawWheel(canvas!, angleRef.current, items, styleId)
+      drawWheel(canvas!, angleRef.current, items, styleId, t('canvasEmpty'))
 
-      if (t < 1) {
+      if (progress < 1) {
         rafRef.current = requestAnimationFrame(frame)
       } else {
         rafRef.current = null
@@ -275,7 +279,7 @@ export function useWheel({ items, styleId, onResult, onSpinStart, onSpinEnd }: U
 
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     rafRef.current = requestAnimationFrame(frame)
-  }, [items, styleId, onResult, onSpinStart, onSpinEnd])
+  }, [items, styleId, onResult, onSpinStart, onSpinEnd, t])
 
   return { canvasRef, spin, initCanvas, redraw }
 }

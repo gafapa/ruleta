@@ -4,15 +4,18 @@ import { Button } from '../ui/Button'
 import type { WheelItem } from '../../types'
 import { generatePalette } from '../../services/colors'
 import { buildItems } from '../../services/wheel'
+import { MAX_WHEEL_ITEMS } from '../../services/limits'
+import { useI18n } from '../../services/i18n'
 
 interface NumberInputProps {
   onItems: (items: WheelItem[]) => void
 }
 
 export function NumberInput({ onItems }: NumberInputProps) {
+  const { t } = useI18n()
   const [value, setValue] = useState('10')
-  const n = Math.max(2, Math.min(100, parseInt(value) || 0))
-  const isValid = !isNaN(parseInt(value)) && n >= 2 && n <= 100
+  const n = Math.max(2, Math.min(MAX_WHEEL_ITEMS, parseInt(value) || 0))
+  const isValid = !isNaN(parseInt(value)) && n >= 2 && n <= MAX_WHEEL_ITEMS
 
   function handleGenerate() {
     if (!isValid) return
@@ -29,7 +32,7 @@ export function NumberInput({ onItems }: NumberInputProps) {
           <input
             type="number"
             min="2"
-            max="100"
+            max={MAX_WHEEL_ITEMS}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
@@ -38,17 +41,17 @@ export function NumberInput({ onItems }: NumberInputProps) {
           />
         </div>
         <Button onClick={handleGenerate} disabled={!isValid} size="md">
-          Generar
+          {t('generate')}
         </Button>
       </div>
 
       {isValid && (
         <p className="text-xs text-slate-500">
-          Se crearán <span className="text-violet-600 font-semibold">{n}</span> elementos (1 al {n})
+          {t('numbersPreview', { count: n })}
         </p>
       )}
       {!isValid && value !== '' && (
-        <p className="text-xs text-red-500">Ingresa un número entre 2 y 100</p>
+        <p className="text-xs text-red-500">{t('numbersInvalid', { count: MAX_WHEEL_ITEMS })}</p>
       )}
     </div>
   )

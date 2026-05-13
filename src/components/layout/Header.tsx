@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react'
-import { Pencil, Check, Download } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Pencil, Check, Download, Globe2 } from 'lucide-react'
+import { MAX_WHEEL_NAME_LENGTH } from '../../services/limits'
+import { LANGUAGES, getItemPluralSuffix, type LanguageCode, useI18n } from '../../services/i18n'
 
 interface HeaderProps {
   wheelName: string
@@ -54,6 +56,7 @@ export function Header({
   isInstalled,
   onInstall,
 }: HeaderProps) {
+  const { language, setLanguage, t } = useI18n()
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,14 +64,19 @@ export function Header({
   function startEdit() {
     setDraft(wheelName)
     setIsEditing(true)
-    setTimeout(() => inputRef.current?.select(), 10)
   }
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.select()
+  }, [isEditing])
 
   function commitEdit() {
     const val = draft.trim()
     if (val) onNameChange(val)
     setIsEditing(false)
   }
+
+  const itemCountPlural = getItemPluralSuffix(language, itemCount)
 
   return (
     <header
@@ -85,7 +93,7 @@ export function Header({
         <WheelIcon />
         <span className="text-lg font-black tracking-tight hidden sm:block"
           style={{ background: 'linear-gradient(90deg, #7C3AED, #06B6D4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Ruleta
+          {t('appTitle')}
         </span>
       </div>
 
@@ -105,24 +113,28 @@ export function Header({
                 if (e.key === 'Enter') commitEdit()
                 if (e.key === 'Escape') setIsEditing(false)
               }}
-              maxLength={40}
+              maxLength={MAX_WHEEL_NAME_LENGTH}
               className="bg-violet-50 border border-violet-300 rounded-lg px-3 py-1 text-sm font-semibold text-slate-800 focus:outline-none min-w-0 max-w-52"
               autoFocus
             />
             <button
+              type="button"
               onMouseDown={(e) => {
                 e.preventDefault()
                 commitEdit()
               }}
               className="p-1 rounded-lg text-violet-600 hover:bg-violet-100 transition-all"
+              aria-label={t('saveName')}
             >
               <Check className="w-4 h-4" />
             </button>
           </div>
         ) : (
           <button
+            type="button"
             onClick={startEdit}
             className="flex items-center gap-1.5 group text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors truncate max-w-full"
+            aria-label={t('editWheelName')}
           >
             <span className="truncate">{wheelName}</span>
             <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 shrink-0 transition-colors" />
@@ -132,28 +144,44 @@ export function Header({
 
       {/* Right */}
       <div className="ml-auto shrink-0 flex items-center gap-3">
+        <label className="relative inline-flex items-center">
+          <Globe2 className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-slate-500" />
+          <span className="sr-only">{t('language')}</span>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+            className="h-8 max-w-[112px] rounded-full border border-slate-200 bg-white pl-7 pr-7 text-xs font-semibold text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+          >
+            {LANGUAGES.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         {canInstall && (
           <button
+            type="button"
             onClick={onInstall}
             className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
           >
             <Download className="h-3.5 w-3.5" />
-            Instalar app
+            {t('installApp')}
           </button>
         )}
         {!canInstall && isInstalled && (
           <span className="text-xs font-semibold bg-slate-900 text-white rounded-full px-3 py-1">
-            App instalada
+            {t('appInstalled')}
           </span>
         )}
         {itemCount > 0 && (
           <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-3 py-1">
-            {itemCount} elemento{itemCount !== 1 ? 's' : ''}
+            {t('itemCount', { count: itemCount, plural: itemCountPlural })}
           </span>
         )}
         {view === 'play' && (
           <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1">
-            Jugando
+            {t('playing')}
           </span>
         )}
       </div>

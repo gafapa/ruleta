@@ -11,7 +11,9 @@ import { Confetti } from './components/result/Confetti'
 import { Button } from './components/ui/Button'
 import { GlassCard } from './components/ui/GlassCard'
 import { useSavedWheels } from './hooks/useSavedWheels'
+import { MAX_WHEEL_NAME_LENGTH } from './services/limits'
 import { DEFAULT_STYLE_ID, type WheelStyleId } from './services/wheelStyles'
+import { useI18n } from './services/i18n'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -22,13 +24,6 @@ declare global {
   interface WindowEventMap {
     beforeinstallprompt: BeforeInstallPromptEvent
   }
-}
-
-const initialState: AppState = {
-  items: [],
-  wheelName: 'Mi Ruleta',
-  isSpinning: false,
-  result: null,
 }
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -57,24 +52,40 @@ function reducer(state: AppState, action: AppAction): AppState {
         wheelName: action.payload.name,
         result: null,
       }
+    case 'RESET_CONFIG':
+      return {
+        ...state,
+        items: [],
+        wheelName: action.payload.name,
+        isSpinning: false,
+        result: null,
+      }
     default:
       return state
   }
 }
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const { t } = useI18n()
+  const [state, dispatch] = useReducer(reducer, undefined, () => ({
+    items: [],
+    wheelName: t('defaultWheelName'),
+    isSpinning: false,
+    result: null,
+  }))
   const [view, setView] = useState<'setup' | 'play'>('setup')
   const [spinTrigger, setSpinTrigger] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
   const [wheelStyleId, setWheelStyleId] = useState<WheelStyleId>(DEFAULT_STYLE_ID)
-  const originalItemsRef = useRef(initialState.items)
+  const originalItemsRef = useRef<AppState['items']>([])
   const { wheels, saveWheel, deleteWheel, error: saveError } = useSavedWheels()
   const [isSavingWheel, setIsSavingWheel] = useState(false)
   const [saveName, setSaveName] = useState('')
   const [savedFeedback, setSavedFeedback] = useState(false)
+  const savedFeedbackTimeoutRef = useRef<number | null>(null)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const isDefaultWheelNameRef = useRef(true)
 
   useEffect(() => {
     const media = window.matchMedia('(display-mode: standalone)')
@@ -107,14 +118,39 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (savedFeedbackTimeoutRef.current !== null) {
+        window.clearTimeout(savedFeedbackTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isDefaultWheelNameRef.current) {
+      dispatch({ type: 'SET_WHEEL_NAME', payload: t('defaultWheelName') })
+    }
+  }, [t])
+
+  const handleNameChange = useCallback((name: string) => {
+    isDefaultWheelNameRef.current = false
+    dispatch({ type: 'SET_WHEEL_NAME', payload: name })
+  }, [])
+
   function handleSaveWheel() {
-    const name = saveName.trim() || state.wheelName
+    const name = (saveName.trim() || state.wheelName).slice(0, MAX_WHEEL_NAME_LENGTH)
     const ok = saveWheel(name, state.items)
     if (ok) {
       setSaveName('')
       setIsSavingWheel(false)
       setSavedFeedback(true)
-      setTimeout(() => setSavedFeedback(false), 2000)
+      if (savedFeedbackTimeoutRef.current !== null) {
+        window.clearTimeout(savedFeedbackTimeoutRef.current)
+      }
+      savedFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setSavedFeedback(false)
+        savedFeedbackTimeoutRef.current = null
+      }, 2000)
     }
   }
 
@@ -160,11 +196,27 @@ export default function App() {
     setShowConfetti(false)
   }, [])
 
+  const handleResetConfiguration = useCallback(() => {
+    originalItemsRef.current = []
+    isDefaultWheelNameRef.current = true
+    dispatch({ type: 'RESET_CONFIG', payload: { name: t('defaultWheelName') } })
+    setWheelStyleId(DEFAULT_STYLE_ID)
+    setSaveName('')
+    setIsSavingWheel(false)
+    setSavedFeedback(false)
+    setShowConfetti(false)
+    setSpinTrigger(0)
+  }, [t])
+
   const handleInstallApp = useCallback(async () => {
     if (!installPrompt) return
-    await installPrompt.prompt()
-    const choice = await installPrompt.userChoice
-    if (choice.outcome === 'accepted') {
+    try {
+      await installPrompt.prompt()
+      const choice = await installPrompt.userChoice
+      if (choice.outcome === 'accepted') {
+        setInstallPrompt(null)
+      }
+    } catch {
       setInstallPrompt(null)
     }
   }, [installPrompt])
@@ -173,7 +225,7 @@ export default function App() {
     <div className="min-h-screen font-display">
       <Header
         wheelName={state.wheelName}
-        onNameChange={(name) => dispatch({ type: 'SET_WHEEL_NAME', payload: name })}
+        onNameChange={handleNameChange}
         itemCount={state.items.length}
         view={view}
         canInstall={installPrompt !== null}
@@ -197,10 +249,20 @@ export default function App() {
               className="w-full"
               disabled={state.items.length < 2}
               onClick={() => setView('play')}
-              title={state.items.length < 2 ? 'Añade al menos 2 elementos' : ''}
+              title={state.items.length < 2 ? t('needsTwoItems') : ''}
             >
               <Play className="w-5 h-5" />
-              Jugar
+              {t('play')}
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="md"
+              className="w-full"
+              onClick={handleResetConfiguration}
+            >
+              <RotateCcw className="w-4 h-4" />
+              {t('resetConfiguration')}
             </Button>
 
             {/* Save section */}
@@ -216,21 +278,24 @@ export default function App() {
                       if (e.key === 'Enter') handleSaveWheel()
                       if (e.key === 'Escape') setIsSavingWheel(false)
                     }}
-                    placeholder={state.wheelName || 'Nombre de la ruleta…'}
-                    maxLength={40}
+                    placeholder={state.wheelName || t('saveWheelPlaceholder')}
+                    maxLength={MAX_WHEEL_NAME_LENGTH}
                     className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-violet-400 transition-all"
                   />
-                  <Button size="sm" onClick={handleSaveWheel}>Guardar</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setIsSavingWheel(false)}>✕</Button>
+                  <Button size="sm" onClick={handleSaveWheel}>{t('save')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsSavingWheel(false)} aria-label={t('cancelSave')}>
+                    ×
+                  </Button>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={() => setIsSavingWheel(true)}
                   disabled={state.items.length < 2}
                   className="w-full flex items-center justify-center gap-2 text-sm font-medium text-slate-500 hover:text-violet-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   <BookmarkPlus className="w-4 h-4" />
-                  {savedFeedback ? '¡Ruleta guardada!' : 'Guardar ruleta actual'}
+                  {savedFeedback ? t('wheelSaved') : t('saveCurrentWheel')}
                 </button>
               )}
             </GlassCard>
@@ -248,6 +313,7 @@ export default function App() {
               wheels={wheels}
               onLoad={(items, name) => {
                 originalItemsRef.current = items
+                isDefaultWheelNameRef.current = false
                 dispatch({ type: 'LOAD_WHEEL', payload: { items, name } })
               }}
               onDelete={deleteWheel}
@@ -258,13 +324,14 @@ export default function App() {
         <main className="pt-20 px-3 pb-12">
           <div className="max-w-[560px] mx-auto flex flex-col items-center gap-4 animate-fade-in">
             <button
+              type="button"
               onClick={() => setView('setup')}
               disabled={state.isSpinning}
-              title={state.isSpinning ? 'Espera a que termine el giro' : ''}
+              title={state.isSpinning ? t('waitForSpin') : ''}
               className="self-start flex items-center gap-1.5 text-sm text-slate-500 hover:text-violet-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Editar ruleta
+              {t('editWheel')}
             </button>
             <div className="glass p-3 sm:p-5 w-full">
               <WheelCanvas
@@ -286,18 +353,19 @@ export default function App() {
             <div className="flex flex-col items-center gap-2">
               <p className="text-xs font-medium tracking-wider uppercase text-slate-400">
                 {state.isSpinning
-                  ? 'Girando…'
+                  ? t('spinning')
                   : state.items.length >= 2
-                    ? 'Toca la ruleta para girar'
-                    : 'Añade al menos 2 elementos'}
+                    ? t('tapWheelToSpin')
+                    : t('needsTwoItems')}
               </p>
               {state.items.length < originalItemsRef.current.length && !state.isSpinning && (
                 <button
+                  type="button"
                   onClick={handleReset}
                   className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-violet-600 transition-colors"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  Reiniciar ruleta
+                  {t('resetWheel')}
                 </button>
               )}
             </div>
@@ -307,7 +375,7 @@ export default function App() {
 
       <footer className="px-4 pb-6">
         <div className="mx-auto max-w-[560px] text-center text-xs text-slate-400">
-          Proyecto:
+          {t('project')}
           {' '}
           <a
             href="https://github.com/gafapa/ruleta"

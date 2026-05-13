@@ -32,3 +32,4 @@ export type AppAction =
   | { type: 'SET_RESULT'; payload: SpinResult | null }
   | { type: 'ELIMINATE_RESULT' }
   | { type: 'LOAD_WHEEL'; payload: { items: WheelItem[]; name: string } }
+  | { type: 'RESET_CONFIG'; payload: { name: string } }

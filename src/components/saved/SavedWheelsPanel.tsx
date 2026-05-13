@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
 import { GlassCard } from '../ui/GlassCard'
 import { SavedWheelCard } from './SavedWheelCard'
 import type { SavedWheel, WheelItem } from '../../types'
+import { useI18n } from '../../services/i18n'
 
 interface SavedWheelsPanelProps {
   wheels: SavedWheel[]
@@ -11,6 +12,7 @@ interface SavedWheelsPanelProps {
 }
 
 export function SavedWheelsPanel({ wheels, onLoad, onDelete }: SavedWheelsPanelProps) {
+  const { t } = useI18n()
   const [isExpanded, setIsExpanded] = useState(true)
 
   return (
@@ -18,11 +20,13 @@ export function SavedWheelsPanel({ wheels, onLoad, onDelete }: SavedWheelsPanelP
       <div className="space-y-4">
         {/* Header */}
         <button
+          type="button"
           className="flex items-center gap-2 text-sm font-semibold text-slate-600 uppercase tracking-wider hover:text-slate-800 transition-colors"
           onClick={() => setIsExpanded((v) => !v)}
+          aria-expanded={isExpanded}
         >
           <BookOpen className="w-4 h-4" />
-          Ruletas guardadas
+          {t('savedWheels')}
           {wheels.length > 0 && (
             <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 normal-case font-normal tracking-normal">
               {wheels.length}
@@ -36,7 +40,7 @@ export function SavedWheelsPanel({ wheels, onLoad, onDelete }: SavedWheelsPanelP
           <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
             {wheels.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-3">
-                Aún no hay ruletas guardadas
+                {t('noSavedWheels')}
               </p>
             ) : (
               wheels

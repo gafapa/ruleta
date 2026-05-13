@@ -4,12 +4,15 @@ import { clsx } from 'clsx'
 import type { WheelItem } from '../../types'
 import { generatePalette } from '../../services/colors'
 import { buildItems } from '../../services/wheel'
+import { MAX_ITEM_LABEL_LENGTH, MAX_UPLOAD_BYTES, MAX_WHEEL_ITEMS } from '../../services/limits'
+import { useI18n } from '../../services/i18n'
 
 interface FileUploadProps {
   onItems: (items: WheelItem[]) => void
 }
 
 export function FileUpload({ onItems }: FileUploadProps) {
+  const { t } = useI18n()
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -19,25 +22,33 @@ export function FileUpload({ onItems }: FileUploadProps) {
     async (file: File) => {
       setError(null)
       setFileName(null)
-      if (!file.name.endsWith('.txt')) {
-        setError('Solo se admiten archivos .txt')
+      if (!file.name.toLowerCase().endsWith('.txt')) {
+        setError(t('onlyTxtFiles'))
+        return
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        setError(t('fileTooLarge', { size: Math.floor(MAX_UPLOAD_BYTES / 1024) }))
         return
       }
       const text = await file.text()
       const lines = text
         .replace(/\r/g, '')
         .split('\n')
-        .map((l) => l.trim())
+        .map((l) => l.trim().slice(0, MAX_ITEM_LABEL_LENGTH))
         .filter(Boolean)
       if (lines.length < 2) {
-        setError('El archivo debe tener al menos 2 elementos')
+        setError(t('fileNeedsTwoItems'))
+        return
+      }
+      if (lines.length > MAX_WHEEL_ITEMS) {
+        setError(t('fileTooManyItems', { count: MAX_WHEEL_ITEMS }))
         return
       }
       const palette = generatePalette(lines.length)
       onItems(buildItems(lines, palette))
       setFileName(file.name)
     },
-    [onItems],
+    [onItems, t],
   )
 
   const handleDrop = useCallback(
@@ -66,7 +77,7 @@ export function FileUpload({ onItems }: FileUploadProps) {
     <div className="space-y-3">
       <div
         className={clsx(
-          'relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200',
+          'relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300',
           isDragging
             ? 'border-violet-400 bg-violet-50'
             : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50',
@@ -78,6 +89,14 @@ export function FileUpload({ onItems }: FileUploadProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            inputRef.current?.click()
+          }
+        }}
       >
         <input
           ref={inputRef}
@@ -90,15 +109,15 @@ export function FileUpload({ onItems }: FileUploadProps) {
           <div className="flex flex-col items-center gap-2">
             <FileText className="w-8 h-8 text-violet-500" />
             <p className="text-sm font-medium text-violet-600">{fileName}</p>
-            <p className="text-xs text-slate-400">Clic para cambiar archivo</p>
+            <p className="text-xs text-slate-400">{t('clickToChangeFile')}</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <Upload className={clsx('w-8 h-8 transition-colors', isDragging ? 'text-violet-500' : 'text-slate-400')} />
             <p className="text-sm font-medium text-slate-600">
-              Arrastra un archivo .txt aquí
+              {t('dragTxtFile')}
             </p>
-            <p className="text-xs text-slate-400">o haz clic para seleccionar</p>
+            <p className="text-xs text-slate-400">{t('clickToSelect')}</p>
           </div>
         )}
       </div>
@@ -111,7 +130,7 @@ export function FileUpload({ onItems }: FileUploadProps) {
       )}
 
       <p className="text-xs text-slate-400">
-        Formato: un elemento por línea en texto plano (.txt)
+        {t('fileFormatHint')}
       </p>
     </div>
   )

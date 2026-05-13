@@ -1,3 +1,5 @@
+import { MAX_ITEM_LABEL_LENGTH } from './limits'
+
 export function easeOutQuartic(t: number): number {
   return 1 - Math.pow(1 - t, 4)
 }
@@ -35,7 +37,7 @@ export function buildItems(
 ): { id: string; label: string; color: string }[] {
   return labels.map((label, i) => ({
     id: crypto.randomUUID(),
-    label,
+    label: label.slice(0, MAX_ITEM_LABEL_LENGTH),
     color: palette[i % palette.length]!,
   }))
 }

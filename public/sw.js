@@ -1,6 +1,7 @@
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '')
 const toScopePath = (path) => `${SCOPE_PATH}${path}`
-const CACHE_NAME = `ruleta-v2:${SCOPE_PATH || '/'}`
+const CACHE_PREFIX = `ruleta:${SCOPE_PATH || '/'}:`
+const CACHE_NAME = `${CACHE_PREFIX}v3`
 const APP_SHELL = [
   toScopePath('/'),
   toScopePath('/manifest.webmanifest'),
@@ -22,7 +23,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
       ),
     ),
@@ -37,8 +38,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
+        if (!response.ok) return response
         const copy = response.clone()
-        if (request.url.startsWith(self.location.origin)) {
+        const url = new URL(request.url)
+        if (url.origin === self.location.origin && url.pathname.startsWith(`${SCOPE_PATH}/`)) {
           void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
         }
         return response
